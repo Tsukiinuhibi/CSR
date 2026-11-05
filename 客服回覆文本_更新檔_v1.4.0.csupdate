@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="app-id" content="cs-reply-texts-app">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>客服回覆文本</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+/* 版面：頂列（品牌＋匯出匯入）／左側分類／右側對話框清單＋底部輸入區。單一暖色淺色主題，深棕字配淺黃底。 */
+:root{
+  color-scheme: light;
+  --bg:#FFF4D6;          /* 頁面底：淺暖黃 */
+  --panel:#FFFBF0;       /* 面板與對話框底 */
+  --ink:#2A1703;         /* 主要文字：深棕，對比約 14:1 */
+  --ink-soft:#5C3A12;    /* 次要文字，對比約 8:1 */
+  --accent:#B94700;      /* 橘：按鈕、重點，白字對比約 5.6:1 */
+  --accent-deep:#8F3600;
+  --sun:#FFC83D;         /* 黃：選取、強調底 */
+  --line:#E0A85A;        /* 邊線 */
+  --danger:#A11212;
+  --red:#B00020;          /* 重點紅字，淺底對比約 7:1 */
+  --z:1;               /* 文字顯示大小倍率（設定內調整）*/
+  --side-w:250px; --notes-w:310px; --composer-h:170px; --nform-h:190px;   /* 可拖曳調整的區塊大小 */
+  --font: "Noto Sans TC","PingFang TC","Microsoft JhengHei","Heiti TC",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:calc(16px * var(--z));line-height:1.6;display:flex;flex-direction:column}
+button,textarea,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 16px;background:var(--accent);color:#fff}
+.top #btnSettings{order:-1}
+.brand{font-weight:900;font-size:calc(20px * var(--z));letter-spacing:.04em;margin-right:auto;display:flex;align-items:baseline;gap:10px}
+.brand small{font-weight:500;font-size:calc(13px * var(--z));background:#fff;color:var(--accent-deep);padding:1px 8px;border-radius:99px}
+.top .btn{background:#fff;color:var(--accent-deep);border-color:#fff}
+.top .btn:hover{background:var(--sun);border-color:var(--sun);color:var(--ink)}
+.top :focus-visible{outline-color:#fff}
+
+.btn{border:2px solid var(--accent);background:var(--panel);color:var(--accent-deep);font-weight:700;padding:6px 14px;border-radius:8px;min-height:38px}
+.btn:hover{background:var(--sun);color:var(--ink)}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent-deep);border-color:var(--accent-deep);color:#fff}
+.btn.danger{border-color:var(--danger);color:var(--danger)}
+.btn.danger:hover{background:var(--danger);color:#fff}
+.btn.small{padding:3px 10px;min-height:32px;font-size:calc(14px * var(--z))}
+
+.shell{flex:1;min-height:0;display:flex}
+.side{width:var(--side-w);flex:none;background:var(--panel);border-right:2px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.side h2{font-size:calc(14px * var(--z));margin:0;padding:14px 16px 6px;color:var(--ink-soft);font-weight:700}
+.cats{list-style:none;margin:0;padding:4px 10px;overflow:auto;flex:1;display:flex;flex-direction:column;gap:4px}
+.cat{width:100%;text-align:left;display:flex;justify-content:space-between;gap:8px;align-items:center;border:2px solid transparent;background:none;padding:9px 10px;border-radius:8px;font-weight:500}
+.cat:hover{background:#FFE9A8}
+.cat[aria-current="true"]{background:var(--sun);border-color:var(--accent);font-weight:700}
+.cat .n{font-size:calc(13px * var(--z));font-variant-numeric:tabular-nums;background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:0 8px;flex:none}
+.cat span:first-child{overflow-wrap:anywhere}
+.side .add{margin:10px}
+
+.main{flex:1;min-width:0;display:flex;flex-direction:column;min-height:0}
+.head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:12px 20px;border-bottom:2px solid var(--line)}
+.head h1{font-size:calc(22px * var(--z));margin:0;margin-right:auto;font-weight:900;overflow-wrap:anywhere}
+.search{border:2px solid var(--line);background:var(--panel);border-radius:8px;padding:5px 10px;min-height:38px;width:180px}
+.list{flex:1;overflow:auto;padding:18px 20px;display:flex;flex-direction:column;gap:14px}
+.bubble{max-width:760px;width:fit-content;min-width:min(320px,100%);background:var(--panel);border:2px solid var(--line);border-left:8px solid var(--accent);border-radius:4px 16px 16px 16px;padding:12px 14px 8px;box-shadow:0 2px 0 rgba(143,54,0,.15)}
+.bubble .txt{white-space:pre-wrap;overflow-wrap:anywhere;font-size:calc(16.5px * var(--z))}
+.bubble .acts{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;padding-top:8px;border-top:1px dashed var(--line)}
+.bubble textarea{width:100%;min-height:110px}
+.empty{color:var(--ink-soft);border:2px dashed var(--line);border-radius:12px;padding:24px;max-width:520px}
+
+textarea{border:2px solid var(--line);background:#fff;border-radius:8px;padding:8px 10px;resize:vertical;line-height:1.6}
+textarea:focus,input:focus{border-color:var(--accent)}
+.composer{background:var(--panel);padding:10px 20px 12px;display:flex;gap:10px;align-items:flex-end;height:var(--composer-h);flex:none}
+.composer textarea{flex:1;min-height:0;resize:none}
+.composer .hint{font-size:calc(13px * var(--z));color:var(--ink-soft);display:block;margin-top:2px}
+
+.notes{width:var(--notes-w);flex:none;background:#FFE9A8;border-left:2px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.notes h2{margin:0;padding:12px 14px;font-size:calc(17px * var(--z));font-weight:900;background:var(--sun);border-bottom:2px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.notes h2 .n{font-size:calc(13px * var(--z));font-weight:700;background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:0 8px;font-variant-numeric:tabular-nums}
+.nlist{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+.note{background:var(--panel);border:2px solid var(--line);border-radius:10px;padding:10px 12px 8px}
+.note.pinned{border-color:var(--accent);box-shadow:inset 0 5px 0 var(--accent)}
+.note .pin{display:inline-block;font-size:calc(12.5px * var(--z));font-weight:700;background:var(--accent);color:#fff;border-radius:99px;padding:0 9px;margin:4px 0 6px}
+.note .txt{white-space:pre-wrap;overflow-wrap:anywhere}
+.note .acts{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
+.note textarea{width:100%;min-height:90px}
+.red{color:var(--red);font-weight:700}
+.btn.redmark{border-color:var(--red);color:var(--red)}
+.btn.redmark:hover{background:var(--red);color:#fff}
+.nform{height:var(--nform-h);flex:none;padding:8px 12px 10px;display:flex;flex-direction:column;gap:8px;background:var(--panel)}
+.nform textarea{flex:1;min-height:0;resize:none}
+.nform .row{display:flex;gap:6px;justify-content:space-between;flex-wrap:wrap}
+.nform .hint{font-size:calc(13px * var(--z));color:var(--ink-soft)}
+@media (max-width:1080px){
+  .shell{flex-wrap:wrap;overflow:auto}
+  .main{min-height:75%;flex-basis:calc(100% - var(--side-w) - 10px)}
+  .split[data-k="notesW"]{display:none}
+  .notes{width:100%;border-left:0;border-top:2px solid var(--line);min-height:auto}
+  .nlist{overflow:visible}
+}
+
+.groups{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 20px;border-bottom:2px solid var(--line);background:#FFE9A8}
+.groups .lbl{font-weight:700;font-size:calc(14px * var(--z));color:var(--ink-soft)}
+.chip{border:2px solid var(--line);background:var(--panel);border-radius:99px;padding:3px 12px;font-weight:500;min-height:34px}
+.chip:hover{border-color:var(--accent)}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+.chip .n{font-variant-numeric:tabular-nums;margin-left:4px}
+.gtools{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.tag{display:inline-block;font-size:calc(13px * var(--z));font-weight:700;background:var(--sun);color:var(--ink);border:1px solid var(--accent);border-radius:99px;padding:0 10px;margin-bottom:6px}
+select{font:inherit;color:var(--ink);border:2px solid var(--line);background:#fff;border-radius:8px;padding:2px 6px;min-height:32px;font-size:calc(14px * var(--z));max-width:180px}
+button:disabled,.btn:disabled,.btn.primary:disabled,.btn:disabled:hover{opacity:1;background:#EADFC8;border-color:#B9A98A;color:#5C4A2E;cursor:not-allowed}
+
+.split{flex:none;background:var(--line);position:relative;touch-action:none}
+.split.v{width:10px;cursor:col-resize}
+.split.hz{height:10px;cursor:row-resize}
+.split::after{content:"";position:absolute;inset:0;margin:auto;background:var(--accent-deep);border-radius:9px}
+.split.v::after{width:4px;height:44px}
+.split.hz::after{height:4px;width:44px}
+.split:hover,.split.drag,.split:focus-visible{background:var(--accent)}
+.split:hover::after,.split.drag::after,.split:focus-visible::after{background:#fff}
+body.dragging{user-select:none}
+body.dragging.col *{cursor:col-resize !important}
+body.dragging.row *{cursor:row-resize !important}
+.selbtn{position:fixed;z-index:15;display:none;background:var(--ink);color:#fff;border:2px solid #fff;border-radius:8px;font-weight:700;padding:5px 12px;font-size:calc(14px * var(--z));box-shadow:0 3px 10px rgba(42,23,3,.4)}
+.selbtn.on{display:block}
+.selbtn:hover{background:var(--accent)}
+::selection{background:#B94700;color:#fff}
+.setrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.setrow input[type=range]{flex:1;min-width:160px;accent-color:var(--accent);height:28px}
+.setrow output{font-weight:900;font-variant-numeric:tabular-nums;min-width:3.2em;text-align:right}
+.sample{border:2px dashed var(--line);border-radius:8px;padding:10px 12px;background:#fff;font-size:calc(16.5px * var(--z))}
+
+.bhead{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.bhead .tag{margin-bottom:0}
+.btitle{font-weight:900;font-size:calc(17px * var(--z));color:var(--accent-deep);overflow-wrap:anywhere}
+.tinput{border:2px solid var(--line);background:#fff;border-radius:8px;padding:5px 10px;width:100%;font-weight:700;margin-bottom:6px}
+.btn.tiny{padding:0 8px;min-height:26px;font-size:calc(12.5px * var(--z));border-width:1px}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:8px;font-weight:700;opacity:0;pointer-events:none;transition:opacity .2s;z-index:30;max-width:90vw}
+.toast.on{opacity:1}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+
+.veil{position:fixed;inset:0;background:rgba(42,23,3,.6);display:none;align-items:center;justify-content:center;padding:16px;z-index:20}
+.veil.on{display:flex}
+.dlg{background:var(--panel);border:3px solid var(--accent);border-radius:14px;padding:20px;width:min(560px,100%);max-height:90%;overflow:auto;display:flex;flex-direction:column;gap:12px}
+.dlg h3{margin:0;font-size:calc(19px * var(--z))}
+.dlg p{margin:0}
+.dlg input[type=text]{border:2px solid var(--line);background:#fff;border-radius:8px;padding:8px 10px;width:100%}
+.dlg textarea{width:100%;min-height:160px;font-size:calc(14px * var(--z))}
+.dlg .row{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.dlg label{font-weight:700}
+
+@media (max-width:720px){
+  .shell{flex-direction:column}
+  .side{width:auto;border-right:0;border-bottom:2px solid var(--line);flex-direction:row;align-items:center}
+  .side h2{display:none}
+  .cats{flex-direction:row;overflow-x:auto;padding:8px}
+  .cat{width:auto;white-space:nowrap}
+  .side .add{margin:8px;flex:none}
+  .search{width:100%}
+  .composer{flex-direction:column;align-items:stretch}
+  .shell{flex-wrap:nowrap}
+  .main{flex-basis:auto;min-height:60vh;flex:none}
+  .side,.notes{flex:none}
+  .split.v{display:none}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <button class="btn" id="btnSettings" type="button">設定</button>
+  <div class="brand">客服回覆文本 <small id="ver"></small></div>
+  <button class="btn" id="btnUpdate" type="button">程式更新</button>
+  <button class="btn" id="btnExport" type="button">匯出 .txt 備份</button>
+  <button class="btn" id="btnImport" type="button">匯入 .txt</button>
+</header>
+
+<div class="shell">
+  <nav class="side" aria-label="分類">
+    <h2>分類頁面</h2>
+    <ul class="cats" id="cats"></ul>
+    <button class="btn add" id="btnAddCat" type="button">＋ 新增分類</button>
+  </nav>
+  <div class="split v" data-k="sideW" role="separator" aria-orientation="vertical" aria-label="調整分類欄寬度" tabindex="0"></div>
+
+  <main class="main">
+    <div class="head">
+      <h1 id="catTitle"></h1>
+      <input class="search" id="search" type="search" placeholder="搜尋名稱或內容" aria-label="搜尋此分類">
+      <button class="btn small" id="btnRename" type="button">重新命名</button>
+      <button class="btn small danger" id="btnDelCat" type="button">刪除分類</button>
+    </div>
+    <div class="groups" id="groups"></div>
+    <div class="list" id="list"></div>
+    <div class="split hz" data-k="composerH" role="separator" aria-orientation="horizontal" aria-label="調整輸入區高度" tabindex="0"></div>
+    <form class="composer" id="composer">
+      <div style="flex:1;min-width:0;display:flex;flex-direction:column;align-self:stretch">
+        <input class="tinput" id="newTitle" type="text" maxlength="60" placeholder="對話框名稱（可不填）" aria-label="對話框名稱">
+        <textarea id="newText" placeholder="輸入一段回覆文本，按「新增」建立對話框" aria-label="新增回覆文本"></textarea>
+        <span class="hint">Ctrl + Enter 可快速新增</span>
+      </div>
+      <button class="btn primary" type="submit">新增</button>
+    </form>
+  </main>
+  <div class="split v" data-k="notesW" role="separator" aria-orientation="vertical" aria-label="調整注意事項欄寬度" tabindex="0"></div>
+
+  <aside class="notes" aria-label="重要注意事項">
+    <h2>重要注意事項 <span class="n" id="noteCount"></span></h2>
+    <div class="nlist" id="nlist"></div>
+    <div class="split hz" data-k="nformH" role="separator" aria-orientation="horizontal" aria-label="調整注意事項輸入區高度" tabindex="0"></div>
+    <form class="nform" id="nform">
+      <textarea id="newNote" placeholder="輸入注意事項" aria-label="新增注意事項"></textarea>
+      <span class="hint">先選取文字，再按「標紅字」可標成重點紅字</span>
+      <div class="row">
+        <button class="btn small redmark" type="button" id="btnRedNew">標紅字</button>
+        <button class="btn small primary" type="submit">新增注意事項</button>
+      </div>
+    </form>
+  </aside>
+</div>
+
+<button class="selbtn" id="selBtn" type="button">複製選取的文字</button>
+<div class="toast" id="toast" role="status"></div>
+<div class="veil" id="veil"><div class="dlg" id="dlg" role="dialog" aria-modal="true"></div></div>
+<input type="file" id="file" accept=".txt,text/plain" hidden>
+
+<script>
+"use strict";
+/* ===== 資料與版本 =====
+   APP_VERSION：程式版本。SCHEMA：資料格式版本。
+   之後改版若資料格式有變，在 MIGRATIONS 加一段升級函式，舊資料會自動延續。 */
+const APP_VERSION = "1.4.0";
+const SCHEMA = 4;
+const KEY = "cs-reply-texts";
+const MIGRATIONS = {
+  2: d => { if (!Array.isArray(d.notes)) d.notes = []; return d; },   // v1.1.0：新增右側「重要注意事項」
+  3: d => { d.categories.forEach(c => { if (!Array.isArray(c.groups)) c.groups = []; c.items.forEach(i => { if (i.group === undefined) i.group = null; }); }); return d; },   // v1.2.0：每個分類頁面的分類群組
+  4: d => { if (!d.settings || typeof d.settings !== "object") d.settings = {}; return d; }   // v1.3.0：設定（文字大小、區塊大小）
+};
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+function defaults(){
+  const g1 = uid(), g2 = uid();
+  return { schema: SCHEMA, settings: {}, notes: [
+    { id: uid(), pinned: true, text: "（範例）退款時程一律以[[驗收完成日]]起算，[[不可]]向客戶承諾確切入帳日期。" },
+    { id: uid(), pinned: false, text: "（範例）回覆前請先核對訂單編號與收件人姓名。" }
+  ], categories: [
+    { id: uid(), name: "退件進度查詢", groups: [{ id: g1, name: "進度回覆" }, { id: g2, name: "退款時程" }], items: [
+      { id: uid(), group: g1, text: "（範例）您好，已為您查詢退件進度，目前包裹已由物流收回，預計 3–5 個工作天內完成驗收，完成後會再通知您。" },
+      { id: uid(), group: g2, text: "（範例）您好，退款將於驗收完成後 7–14 個工作天內退回原付款方式，再請您留意帳戶明細，謝謝。" }
+    ]},
+    { id: uid(), name: "雲端檔名整理", groups: [], items: [
+      { id: uid(), group: null, text: "（範例）檔名格式：日期_訂單編號_客戶姓名_事由\n例：20261105_A123456_王小明_退件" }
+    ]}
+  ]};
+}
+function migrate(d){
+  if (!d || !Array.isArray(d.categories)) return defaults();
+  let v = d.schema || 1;
+  while (v < SCHEMA) { v++; if (MIGRATIONS[v]) d = MIGRATIONS[v](d); }
+  d.schema = SCHEMA;
+  if (!Array.isArray(d.notes)) d.notes = [];
+  if (!d.settings || typeof d.settings !== "object") d.settings = {};
+  d.categories.forEach(c => { if (!Array.isArray(c.groups)) c.groups = []; if (!Array.isArray(c.items)) c.items = []; });
+  return d;
+}
+const DESKTOP = window.desktop || null;   // 桌面版才有
+let loadFailed = false;
+function load(){
+  if (DESKTOP) {
+    const raw = DESKTOP.loadData();
+    if (raw) { try { return migrate(JSON.parse(raw)); } catch(e){ loadFailed = true; } }
+    return defaults();
+  }
+  try { const raw = localStorage.getItem(KEY); if (raw) return migrate(JSON.parse(raw)); } catch(e){}
+  return defaults();
+}
+let storageOk = true;
+function save(){
+  if (loadFailed) { loadFailed = false; if (DESKTOP) DESKTOP.keepBroken(); }
+  if (DESKTOP) { if (!DESKTOP.saveData(JSON.stringify(data)) && storageOk) { storageOk = false; toast("資料檔寫入失敗，請先匯出 .txt 備份"); } return; }
+  try { localStorage.setItem(KEY, JSON.stringify(data)); }
+  catch(e){ if (storageOk) toast("此瀏覽器無法儲存，請記得匯出 .txt 備份"); storageOk = false; }
+}
+
+let data = load();
+let currentId = data.categories[0] ? data.categories[0].id : null;
+let editingId = null;
+let groupFilter = "all";   // "all"｜"none"（未分組）｜群組 id
+const $ = id => document.getElementById(id);
+const cur = () => data.categories.find(c => c.id === currentId) || null;
+
+/* ===== .txt 格式（可匯出再匯入）=====
+   #!客服回覆文本 備份 格式=1
+   === 分類名稱 ===
+   --- 對話框 ---
+   內容（可多行）
+   內容中若有一行以 \ # === --- 開頭，匯出時前面加 \ ，匯入時去掉。 */
+const TXT_HEAD = "#!客服回覆文本 備份 格式=4";
+const needsEsc = l => /^(\\|#|===|---|\+\+\+|:::)/.test(l);
+function toTxt(){
+  const out = [TXT_HEAD, "# 匯出時間：" + new Date().toLocaleString("zh-TW"), "# 程式版本：" + APP_VERSION,
+    "# 此檔可用「匯入 .txt」還原。請勿更動 ===、+++、::: 與 --- 開頭的標記行。", "# 注意事項裡的 [[文字]] 代表重點紅字。", ""];
+  const body = t => t.split("\n").forEach(l => out.push(needsEsc(l) ? "\\" + l : l));
+  out.push("+++ 重要注意事項 +++");
+  data.notes.forEach(n => { out.push(n.pinned ? "--- 注意事項 釘選 ---" : "--- 注意事項 ---"); body(n.text); });
+  out.push("");
+  data.categories.forEach(c => {
+    out.push("=== " + c.name.replace(/\s*\n\s*/g, " ") + " ===");
+    c.groups.forEach(g => out.push("::: 群組 " + g.name + " :::"));
+    c.items.forEach(i => {
+      const g = c.groups.find(x => x.id === i.group);
+      out.push(g ? "--- 對話框 @" + g.name + " ---" : "--- 對話框 ---");
+      if (i.title) out.push("::: 名稱 " + i.title.replace(/\s*\n\s*/g, " ") + " :::");
+      body(i.text);
+    });
+    out.push("");
+  });
+  return out.join("\r\n");
+}
+function fromTxt(txt){
+  const lines = txt.replace(/^﻿/, "").replace(/\r\n?/g, "\n").split("\n");
+  if (!lines[0] || !lines[0].startsWith("#!客服回覆文本")) throw new Error("這不是本程式匯出的備份檔（缺少第一行標記）。");
+  const cats = [], notes = []; let cat = null, buf = null, inNotes = false, pin = false, grp = null, ttl = "";
+  const getG = name => { let g = cat.groups.find(x => x.name === name); if (!g) { g = { id: uid(), name }; cat.groups.push(g); } return g.id; };
+  const flush = () => { if (buf) { while (buf.length && buf[buf.length-1] === "") buf.pop(); const text = buf.join("\n");
+    if (inNotes) notes.push({ id: uid(), pinned: pin, text }); else if (cat) cat.items.push({ id: uid(), group: grp, title: ttl, text }); } buf = null; };
+  for (let k = 1; k < lines.length; k++){
+    const l = lines[k]; let m;
+    if (/^\+\+\+ 重要注意事項 \+\+\+\s*$/.test(l)) { flush(); inNotes = true; cat = null; }
+    else if ((m = /^--- 注意事項( 釘選)? ---\s*$/.exec(l))) { flush(); if (inNotes) { buf = []; pin = !!m[1]; } }
+    else if ((m = /^=== (.*) ===\s*$/.exec(l))) { flush(); inNotes = false; cat = { id: uid(), name: m[1].trim() || "未命名分類", groups: [], items: [] }; cats.push(cat); }
+    else if (buf && !buf.length && !inNotes && (m = /^::: 名稱 (.+?) :::\s*$/.exec(l))) ttl = m[1].trim();
+    else if ((m = /^::: 群組 (.+?) :::\s*$/.exec(l))) { flush(); if (cat) getG(m[1].trim()); }
+    else if ((m = /^--- 對話框(?: @(.+?))? ---\s*$/.exec(l))) { flush(); if (cat) { buf = []; ttl = ""; grp = m[1] ? getG(m[1].trim()) : null; } }
+    else if (l.startsWith("#") && !buf) { /* 註解 */ }
+    else if (buf) buf.push(l.startsWith("\\") ? l.slice(1) : l);
+  }
+  flush();
+  if (!cats.length && !notes.length) throw new Error("檔案裡找不到任何分類或注意事項。");
+  return { cats, notes };
+}
+
+/* ===== 畫面 ===== */
+function render(){
+  renderNotes();
+  if (!cur() && data.categories[0]) currentId = data.categories[0].id;
+  const c = cur();
+  const ul = $("cats"); ul.textContent = "";
+  data.categories.forEach(cat => {
+    const li = document.createElement("li"), b = document.createElement("button");
+    b.type = "button"; b.className = "cat"; if (cat.id === currentId) b.setAttribute("aria-current", "true");
+    const s = document.createElement("span"); s.textContent = cat.name;
+    const n = document.createElement("span"); n.className = "n"; n.textContent = cat.items.length;
+    b.append(s, n);
+    b.onclick = () => { currentId = cat.id; editingId = null; groupFilter = "all"; $("search").value = ""; render(); };
+    li.append(b); ul.append(li);
+  });
+  $("catTitle").textContent = c ? c.name : "尚無分類";
+  ["btnRename","btnDelCat","search","newText"].forEach(id => $(id).disabled = !c);
+  const list = $("list"); list.textContent = "";
+  if (c && groupFilter !== "all" && groupFilter !== "none" && !c.groups.some(g => g.id === groupFilter)) groupFilter = "all";
+  renderGroups(c);
+  if (!c) { list.append(emptyBox("請先按左側「＋ 新增分類」建立分類頁面。")); return; }
+  const q = $("search").value.trim().toLowerCase();
+  const inG = i => groupFilter === "all" || (groupFilter === "none" ? !i.group : i.group === groupFilter);
+  const items = c.items.filter(i => inG(i) && (!q || i.text.toLowerCase().includes(q) || (i.title || "").toLowerCase().includes(q)));
+  if (!items.length) { list.append(emptyBox(q ? "找不到符合「" + q + "」的文本。" : groupFilter !== "all" ? "這個群組還沒有文本。在下方輸入內容後按「新增」，會直接放進這個群組。" : "這個分類還沒有文本。在下方輸入內容後按「新增」。")); return; }
+  items.forEach(i => list.append(i.id === editingId ? editBubble(c, i) : viewBubble(c, i)));
+}
+/* 分類群組列：點群組＝篩選；選到某個群組時右邊出現 重新命名／複製／刪除 */
+function renderGroups(c){
+  const bar = $("groups"); bar.textContent = "";
+  if (!c) { bar.style.display = "none"; return; }
+  bar.style.display = "";
+  bar.append(h("span", "分類群組", "lbl"));
+  const chip = (key, label, n) => {
+    const b = document.createElement("button"); b.type = "button"; b.className = "chip"; b.setAttribute("aria-pressed", String(groupFilter === key));
+    b.append(label); const s = h("span", String(n), "n"); b.append(s);
+    b.onclick = () => { groupFilter = key; editingId = null; render(); };
+    bar.append(b);
+  };
+  chip("all", "全部", c.items.length);
+  c.groups.forEach(g => chip(g.id, g.name, c.items.filter(i => i.group === g.id).length));
+  if (c.groups.length) chip("none", "未分組", c.items.filter(i => !i.group).length);
+  bar.append(mkBtn("＋ 新增群組", "", () => nameDlg("新增分類群組", "", v => {
+    if (c.groups.some(g => g.name === v)) { toast("已經有同名的群組"); return; }
+    const g = { id: uid(), name: v }; c.groups.push(g); groupFilter = g.id; save(); render();
+  })));
+  const g = c.groups.find(x => x.id === groupFilter);
+  if (g) {
+    const tools = h("div", null, "gtools");
+    tools.append(
+      mkBtn("重新命名群組", "", () => nameDlg("重新命名群組", g.name, v => {
+        if (c.groups.some(x => x !== g && x.name === v)) { toast("已經有同名的群組"); return; }
+        g.name = v; save(); render(); })),
+      mkBtn("複製整組文本", "primary", () => {
+        const t = c.items.filter(i => i.group === g.id).map(i => i.text);
+        if (!t.length) { toast("這個群組還沒有文本"); return; }
+        copyText(t.join("\n\n")); }),
+      mkBtn("刪除群組", "danger", () => confirmDlg("刪除群組「" + g.name + "」？", "只會刪除群組標記，裡面的文本會保留並改為「未分組」。", "刪除群組", () => {
+        c.items.forEach(i => { if (i.group === g.id) i.group = null; });
+        c.groups = c.groups.filter(x => x.id !== g.id); groupFilter = "all"; save(); render(); toast("已刪除群組"); }))
+    );
+    bar.append(tools);
+  }
+}
+function groupSelect(c, i){
+  const sel = document.createElement("select"); sel.id = "grp-" + i.id; sel.setAttribute("aria-label", "分類群組");
+  const o0 = document.createElement("option"); o0.value = ""; o0.textContent = "未分組"; sel.append(o0);
+  c.groups.forEach(g => { const o = document.createElement("option"); o.value = g.id; o.textContent = "群組：" + g.name; sel.append(o); });
+  sel.value = i.group || "";
+  sel.onchange = () => { i.group = sel.value || null; save(); render(); toast(i.group ? "已標記群組" : "已改為未分組"); };
+  if (!c.groups.length) { sel.disabled = true; o0.textContent = "尚無群組"; }
+  return sel;
+}
+function emptyBox(t){ const d = document.createElement("div"); d.className = "empty"; d.textContent = t; return d; }
+function mkBtn(label, cls, fn){ const b = document.createElement("button"); b.type = "button"; b.className = "btn small " + (cls||""); b.textContent = label; b.onclick = fn; return b; }
+function viewBubble(c, i){
+  const el = document.createElement("article"); el.className = "bubble";
+  const t = document.createElement("div"); t.className = "txt"; t.textContent = i.text;
+  const a = document.createElement("div"); a.className = "acts";
+  a.append(
+    mkBtn("複製", "primary", () => copyText(i.text)),
+    mkBtn("編輯", "", () => { editingId = i.id; render(); }),
+    mkBtn("刪除", "danger", () => confirmDlg("刪除這段文本？", i.text.slice(0, 80) + (i.text.length > 80 ? "…" : ""), "刪除", () => {
+      c.items = c.items.filter(x => x.id !== i.id); save(); render(); toast("已刪除");
+    }))
+  );
+  a.append(groupSelect(c, i));
+  const g = c.groups.find(x => x.id === i.group);
+  if (g || i.title) {
+    const hd = h("div", null, "bhead");
+    if (g) hd.append(h("div", g.name, "tag"));
+    if (i.title) { hd.append(h("div", i.title, "btitle")); const cb = mkBtn("複製名稱", "tiny", () => copyText(i.title, "已複製名稱")); hd.append(cb); }
+    el.append(hd);
+  }
+  el.append(t, a); return el;
+}
+function editBubble(c, i){
+  const el = document.createElement("article"); el.className = "bubble"; el.style.width = "100%";
+  const ta = document.createElement("textarea"); ta.value = i.text; ta.id = "edit-" + i.id; ta.setAttribute("aria-label", "編輯文本");
+  const ti = document.createElement("input"); ti.type = "text"; ti.className = "tinput"; ti.id = "etitle-" + i.id; ti.maxLength = 60; ti.value = i.title || ""; ti.placeholder = "對話框名稱（可不填）"; ti.setAttribute("aria-label", "對話框名稱");
+  const a = document.createElement("div"); a.className = "acts";
+  const done = () => { const v = ta.value.trim(); if (!v) { toast("內容不能是空白"); return; } i.text = v; i.title = ti.value.trim(); editingId = null; save(); render(); toast("已儲存"); };
+  a.append(mkBtn("儲存", "primary", done), mkBtn("取消", "", () => { editingId = null; render(); }));
+  ta.onkeydown = e => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") done(); if (e.key === "Escape") { editingId = null; render(); } };
+  ti.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); ta.focus(); } if (e.key === "Escape") { editingId = null; render(); } };
+  el.append(ti, ta, a); setTimeout(() => ta.focus(), 0); return el;
+}
+
+let toastTimer;
+function toast(msg){ const t = $("toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("on"), 2200); }
+async function copyText(text, msg){
+  msg = msg || "已複製";
+  if (DESKTOP) { DESKTOP.copy(text); toast(msg); return; }
+  try { await navigator.clipboard.writeText(text); toast(msg); }
+  catch(e){
+    const ta = document.createElement("textarea"); ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.append(ta); ta.select(); let ok = false; try { ok = document.execCommand("copy"); } catch(_){}
+    ta.remove(); toast(ok ? msg : "無法自動複製，請手動選取文字");
+  }
+}
+
+/* ===== 對話視窗 ===== */
+function openDlg(build){ const d = $("dlg"); d.textContent = ""; build(d); $("veil").classList.add("on"); const f = d.querySelector("input,textarea,button"); if (f) f.focus(); }
+function closeDlg(){ $("veil").classList.remove("on"); }
+$("veil").addEventListener("mousedown", e => { if (e.target === $("veil")) closeDlg(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeDlg(); });
+function h(tag, text, cls){ const e = document.createElement(tag); if (text != null) e.textContent = text; if (cls) e.className = cls; return e; }
+function dBtn(label, cls, fn){ const b = h("button", label, "btn " + (cls||"")); b.type = "button"; b.onclick = fn; return b; }
+function confirmDlg(title, body, okLabel, onOk){
+  openDlg(d => { const row = h("div", null, "row");
+    row.append(dBtn("取消", "", closeDlg), dBtn(okLabel, "danger", () => { closeDlg(); onOk(); }));
+    d.append(h("h3", title), h("p", body), row); });
+}
+function nameDlg(title, initial, onOk){
+  openDlg(d => {
+    const inp = document.createElement("input"); inp.type = "text"; inp.id = "dlgName"; inp.value = initial; inp.maxLength = 40; inp.setAttribute("aria-label", "分類名稱");
+    const go = () => { const v = inp.value.trim(); if (!v) { toast("請輸入名稱"); return; } closeDlg(); onOk(v); };
+    inp.onkeydown = e => { if (e.key === "Enter") go(); };
+    const row = h("div", null, "row"); row.append(dBtn("取消", "", closeDlg), dBtn("確定", "primary", go));
+    d.append(h("h3", title), inp, row);
+  });
+}
+
+/* ===== 分類操作 ===== */
+$("btnAddCat").onclick = () => nameDlg("新增分類", "", v => { const c = { id: uid(), name: v, groups: [], items: [] }; data.categories.push(c); currentId = c.id; save(); render(); });
+$("btnRename").onclick = () => { const c = cur(); if (c) nameDlg("重新命名分類", c.name, v => { c.name = v; save(); render(); }); };
+$("btnDelCat").onclick = () => { const c = cur(); if (!c) return;
+  confirmDlg("刪除分類「" + c.name + "」？", "分類內的 " + c.items.length + " 段文本會一起刪除，無法復原。建議先匯出 .txt 備份。", "刪除分類", () => {
+    data.categories = data.categories.filter(x => x.id !== c.id); currentId = data.categories[0] ? data.categories[0].id : null; save(); render(); toast("已刪除分類"); }); };
+$("search").oninput = render;
+
+/* ===== 新增文本 ===== */
+$("composer").addEventListener("submit", e => {
+  e.preventDefault(); const c = cur(), ta = $("newText"), v = ta.value.trim();
+  if (!c || !v) return;
+  c.items.push({ id: uid(), group: (groupFilter !== "all" && groupFilter !== "none") ? groupFilter : null, title: $("newTitle").value.trim(), text: v }); ta.value = ""; $("newTitle").value = ""; $("search").value = ""; save(); render();
+  const list = $("list"); list.scrollTop = list.scrollHeight; ta.focus();
+});
+$("newTitle").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); $("newText").focus(); } });
+$("newText").addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") $("composer").requestSubmit(); });
+
+/* ===== 重要注意事項（右側欄）===== 紅字標記寫成 [[文字]] */
+let editingNote = null;
+const RED = /\[\[([\s\S]+?)\]\]/g;
+const plain = t => t.replace(RED, "$1");
+function fillRed(el, text){
+  let last = 0, m; RED.lastIndex = 0;
+  while ((m = RED.exec(text))) {
+    if (m.index > last) el.append(text.slice(last, m.index));
+    const s = document.createElement("span"); s.className = "red"; s.textContent = m[1]; el.append(s);
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) el.append(text.slice(last));
+}
+function wrapRed(ta){
+  const s = ta.selectionStart, e = ta.selectionEnd;
+  if (s === e) { toast("請先選取要標成紅字的文字"); ta.focus(); return; }
+  ta.value = ta.value.slice(0, s) + "[[" + ta.value.slice(s, e) + "]]" + ta.value.slice(e);
+  ta.focus(); ta.setSelectionRange(s, e + 4);
+}
+function renderNotes(){
+  const box = $("nlist"); box.textContent = "";
+  $("noteCount").textContent = data.notes.length;
+  if (!data.notes.length) { box.append(emptyBox("還沒有注意事項。在下方輸入後按「新增注意事項」。")); return; }
+  const sorted = data.notes.filter(n => n.pinned).concat(data.notes.filter(n => !n.pinned));
+  sorted.forEach(n => {
+    const el = document.createElement("article"); el.className = "note" + (n.pinned ? " pinned" : "");
+    const a = document.createElement("div"); a.className = "acts";
+    if (n.id === editingNote) {
+      const ta = document.createElement("textarea"); ta.value = n.text; ta.id = "nedit-" + n.id; ta.setAttribute("aria-label", "編輯注意事項");
+      const done = () => { const v = ta.value.trim(); if (!v) { toast("內容不能是空白"); return; } n.text = v; editingNote = null; save(); renderNotes(); toast("已儲存"); };
+      ta.onkeydown = e => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") done(); if (e.key === "Escape") { editingNote = null; renderNotes(); } };
+      a.append(mkBtn("儲存", "primary", done), mkBtn("標紅字", "redmark", () => wrapRed(ta)), mkBtn("取消", "", () => { editingNote = null; renderNotes(); }));
+      el.append(ta, a); setTimeout(() => ta.focus(), 0);
+    } else {
+      if (n.pinned) el.append(h("div", "已釘選", "pin"));
+      const t = document.createElement("div"); t.className = "txt"; fillRed(t, n.text);
+      a.append(
+        mkBtn("複製", "primary", () => copyText(plain(n.text))),
+        mkBtn("編輯", "", () => { editingNote = n.id; renderNotes(); }),
+        mkBtn(n.pinned ? "取消釘選" : "釘選", "", () => { n.pinned = !n.pinned; save(); renderNotes(); toast(n.pinned ? "已釘選到最上方" : "已取消釘選"); }),
+        mkBtn("刪除", "danger", () => confirmDlg("刪除這則注意事項？", plain(n.text).slice(0, 80), "刪除", () => {
+          data.notes = data.notes.filter(x => x.id !== n.id); save(); renderNotes(); toast("已刪除"); }))
+      );
+      el.append(t, a);
+    }
+    box.append(el);
+  });
+}
+$("btnRedNew").onclick = () => wrapRed($("newNote"));
+$("nform").addEventListener("submit", e => {
+  e.preventDefault(); const ta = $("newNote"), v = ta.value.trim(); if (!v) return;
+  data.notes.push({ id: uid(), pinned: false, text: v }); ta.value = ""; save(); renderNotes(); ta.focus();
+});
+$("newNote").addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") $("nform").requestSubmit(); });
+
+/* ===== 匯出 ===== */
+function stamp(){ const d = new Date(), p = n => String(n).padStart(2, "0"); return d.getFullYear() + p(d.getMonth()+1) + p(d.getDate()) + "_" + p(d.getHours()) + p(d.getMinutes()); }
+async function doExport(next){
+  const txt = toTxt(), filename = "客服回覆文本_備份_" + stamp() + ".txt";
+  if (DESKTOP) {
+    const r = await DESKTOP.saveTxt(filename, "\uFEFF" + txt);
+    if (r && r.status === "saved") { toast("已匯出到 " + r.path); return "saved"; }
+    if (r && r.status === "error") { toast("匯出失敗：" + r.error); return "declined"; }
+    toast("已取消匯出"); return "declined";
+  }
+  let dl = null;
+  try { if (window.claude && window.claude.use) dl = await window.claude.use("downloads"); } catch(e){}
+  if (dl) {
+    try { await dl.save({ filename, data: "﻿" + txt }); toast("已匯出 " + filename); return "saved"; }
+    catch(err){ if (err && err.code === "declined") { toast("已取消匯出"); return "declined"; } }
+  }
+  openDlg(d => {
+    const ta = document.createElement("textarea"); ta.readOnly = true; ta.value = txt; ta.id = "dlgExport"; ta.setAttribute("aria-label", "備份內容");
+    const row = h("div", null, "row"); row.append(next ? dBtn("已備份，下一步", "", () => next("manual")) : dBtn("關閉", "", closeDlg), dBtn("複製全部", "primary", () => copyText(txt)));
+    d.append(h("h3", "匯出備份"), h("p", "這個預覽畫面目前無法直接下載檔案。請複製以下內容，貼到記事本並存成 .txt，之後可用「匯入 .txt」還原。"), ta, row);
+  });
+  return "manual";
+}
+$("btnExport").onclick = () => doExport();
+
+/* ===== 程式更新 =====
+   按下後先自動匯出 .txt 備份，再進入更新步驟。
+   網頁預覽版無法替換程式本身；桌面版會在這裡開啟「選擇更新檔」並安裝。 */
+const ONLINE = !!(DESKTOP && DESKTOP.checkUpdate);   // 新版外殼才有 GitHub 線上更新
+async function onlineInstall(){
+  toast("下載更新中…");
+  let r = null; try { r = await DESKTOP.downloadUpdate(); } catch(e){}
+  if (!r || !r.ok) { toast((r && r.error) || "下載失敗，請稍後再試"); return false; }
+  closeDlg(); toast("已更新到 v" + r.version + "，重新載入中"); setTimeout(() => DESKTOP.reload(), 1000); return true;
+}
+// 開啟程式時自動檢查一次；有新版才提示
+if (ONLINE) setTimeout(async () => {
+  let r = null; try { r = await DESKTOP.checkUpdate(); } catch(e){}
+  if (!r || r.status !== "available" || $("veil").classList.contains("on")) return;
+  openDlg(d => {
+    const row = h("div", null, "row");
+    row.append(dBtn("稍後再說", "", closeDlg), dBtn("立即更新", "primary", async () => {
+      const w = await autoBackup();
+      if (!w) { toast("自動備份失敗，已取消更新。請先按「匯出 .txt 備份」"); return; }
+      await onlineInstall();
+    }));
+    d.append(h("h3", "有新版本 v" + r.version), h("p", "目前版本是 v" + APP_VERSION + "。更新前會自動匯出 .txt 備份，原有的分類、文本和注意事項都會保留。"), row);
+  });
+}, 1500);
+async function autoBackup(){
+  try { return await DESKTOP.autoBackup("客服回覆文本_更新前備份_" + stamp() + ".txt", "﻿" + toTxt()); } catch(e){ return null; }
+}
+function updateDlg(status, where){
+  openDlg(d => {
+    const msg = { auto: "第 1 步完成：已自動匯出 .txt 備份檔到\n" + where, failed: "第 1 步未完成：自動備份失敗。請先按「匯出 .txt 備份」再更新。",
+      saved: "第 1 步完成：已自動匯出 .txt 備份檔。", declined: "第 1 步未完成：備份已取消。建議先備份再更新。", manual: "第 1 步完成：已顯示備份內容供您複製保存。" }[status];
+    const m = h("p", msg); m.style.whiteSpace = "pre-wrap"; m.style.overflowWrap = "anywhere";
+    const row = h("div", null, "row");
+    let pick, step2, extra = [];
+    if (DESKTOP) {
+      step2 = ONLINE ? "連不上 GitHub 時，可以改用手動方式：選擇副檔名 .csupdate 的更新檔。" : "第 2 步：選擇更新檔（副檔名 .csupdate）。這個版本的程式不支援線上更新，請下載新版 exe 後才會有。";
+      pick = dBtn("手動選擇更新檔", ONLINE ? "" : "primary", async () => {
+        const r = await DESKTOP.pickUpdate();
+        if (!r || r.canceled) return;
+        if (!r.ok) { toast(r.error); return; }
+        closeDlg(); toast("已更新到 v" + r.version + "，重新載入中"); setTimeout(() => DESKTOP.reload(), 1000);
+      });
+      if (status === "failed") pick.disabled = true;
+      if (ONLINE) {
+        const info = h("p", "第 2 步：正在檢查 GitHub 上有沒有新版…"); info.style.fontWeight = "700";
+        const go = dBtn("從 GitHub 下載並更新", "primary", async () => { go.disabled = true; if (!(await onlineInstall())) go.disabled = false; });
+        go.disabled = true; extra = [info, go];
+        DESKTOP.checkUpdate().then(r => {
+          if (r.status === "available") { info.textContent = "第 2 步：GitHub 上有新版 v" + r.version + "。安裝後原有資料都會保留。"; go.disabled = status === "failed"; }
+          else if (r.status === "none") info.textContent = "第 2 步：目前已是最新版" + (r.version ? "（GitHub 上最新是 v" + r.version + "）" : "（GitHub 上還沒有更新檔）") + "。";
+          else info.textContent = "第 2 步：無法檢查 GitHub（" + r.error + "）。";
+        }).catch(() => { info.textContent = "第 2 步：無法檢查 GitHub。"; });
+      }
+      row.append(dBtn("重新備份", "", async () => { const w = await autoBackup(); updateDlg(w ? "auto" : "failed", w); }), dBtn("關閉", "", closeDlg));
+    } else {
+      step2 = "第 2 步：選擇更新檔。這個網頁預覽版無法替換程式本身，所以按鈕不能按。桌面版在這裡選擇更新檔就會安裝新版，原有資料都會保留。";
+      pick = dBtn("選擇更新檔（桌面版提供）", "", () => {}); pick.disabled = true;
+      row.append(dBtn("重新匯出備份", "", async () => { closeDlg(); const st = await doExport(updateDlg); if (st !== "manual") updateDlg(st); }), dBtn("關閉", "primary", closeDlg));
+    }
+    d.append(h("h3", "程式更新"), h("p", "目前版本：v" + APP_VERSION), m, ...extra, h("p", step2), pick, row);
+  });
+}
+$("btnUpdate").onclick = async () => {
+  if (DESKTOP) { const w = await autoBackup(); updateDlg(w ? "auto" : "failed", w); return; }
+  const st = await doExport(updateDlg); if (st !== "manual") updateDlg(st);
+};
+
+/* ===== 匯入 ===== */
+let pending = "";
+$("btnImport").onclick = () => {
+  pending = "";
+  openDlg(d => {
+    const pick = dBtn("選擇 .txt 檔案", "", () => $("file").click());
+    const ta = document.createElement("textarea"); ta.id = "dlgImport"; ta.placeholder = "或把備份檔的文字內容貼在這裡"; ta.setAttribute("aria-label", "備份內容");
+    const info = h("p", "尚未選擇檔案。"); info.id = "importInfo";
+    const run = mode => {
+      let cats, notes; try { ({ cats, notes } = fromTxt(pending || ta.value)); } catch(err){ toast(err.message); return; }
+      const n = cats.reduce((s, c) => s + c.items.length, 0);
+      if (mode === "replace") { data.categories = cats; data.notes = notes; }
+      else { notes.forEach(x => { if (!data.notes.some(y => y.text === x.text)) data.notes.push(x); }); cats.forEach(c => {
+        const ex = data.categories.find(x => x.name === c.name);
+        if (!ex) { data.categories.push(c); return; }
+        const map = {}; c.groups.forEach(g => { let t = ex.groups.find(x => x.name === g.name); if (!t) { t = g; ex.groups.push(g); } map[g.id] = t.id; });
+        c.items.forEach(i => { if (!ex.items.some(x => x.text === i.text)) { i.group = i.group ? map[i.group] : null; ex.items.push(i); } });
+      }); }
+      currentId = data.categories[0] ? data.categories[0].id : null; editingId = null; save(); render(); closeDlg();
+      toast("已匯入 " + cats.length + " 個分類、" + n + " 段文本、" + notes.length + " 則注意事項");
+    };
+    const row = h("div", null, "row");
+    row.append(dBtn("取消", "", closeDlg), dBtn("取代全部資料", "danger", () => run("replace")), dBtn("合併到現有資料", "primary", () => run("merge")));
+    d.append(h("h3", "匯入 .txt 備份"), pick, info, ta,
+      h("p", "合併：同名分類會併在一起，重複的文本和注意事項不會再加一次。取代：現有資料（含注意事項）全部換成備份檔內容。"), row);
+  });
+};
+$("file").addEventListener("change", e => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => { pending = String(r.result); const i = $("importInfo"); if (i) i.textContent = "已讀取：" + f.name; };
+  r.onerror = () => toast("讀不到這個檔案，請再試一次");
+  r.readAsText(f, "utf-8"); e.target.value = "";
+});
+
+/* ===== 設定：文字大小、區塊大小 =====
+   存在 data.settings。之後新增設定項目：在 DEF 加預設值，在設定視窗加一列。 */
+const DEF = { fontScale: 100, sideW: 250, notesW: 310, composerH: 170, nformH: 190 };
+const LIM = { fontScale: [80, 200], sideW: [150, 520], notesW: [200, 720], composerH: [140, 560], nformH: [130, 560] };
+const CSSVAR = { sideW: "--side-w", notesW: "--notes-w", composerH: "--composer-h", nformH: "--nform-h" };
+const setting = k => { const v = Number(data.settings[k]); return Number.isFinite(v) ? Math.min(LIM[k][1], Math.max(LIM[k][0], v)) : DEF[k]; };
+function applySettings(){
+  const r = document.documentElement.style;
+  r.setProperty("--z", String(setting("fontScale") / 100));
+  Object.keys(CSSVAR).forEach(k => r.setProperty(CSSVAR[k], setting(k) + "px"));
+}
+function setSetting(k, v, persist){
+  data.settings[k] = Math.round(Math.min(LIM[k][1], Math.max(LIM[k][0], v)));
+  applySettings(); if (persist) save();
+}
+
+/* 拖曳分隔條調整區塊大小；雙擊恢復預設；方向鍵也可調整 */
+document.querySelectorAll(".split").forEach(sp => {
+  const k = sp.dataset.k, vertical = sp.classList.contains("v");
+  const sign = k === "sideW" ? 1 : -1;   // 分類欄往右拉變寬；其餘往左／往上拉變大
+  let start = 0, base = 0, on = false;
+  sp.addEventListener("pointerdown", e => {
+    on = true; start = vertical ? e.clientX : e.clientY; base = setting(k);
+    sp.setPointerCapture(e.pointerId); sp.classList.add("drag"); document.body.classList.add("dragging", vertical ? "col" : "row"); e.preventDefault();
+  });
+  sp.addEventListener("pointermove", e => { if (on) setSetting(k, base + sign * ((vertical ? e.clientX : e.clientY) - start), false); });
+  const end = () => { if (!on) return; on = false; sp.classList.remove("drag"); document.body.classList.remove("dragging", "col", "row"); save(); };
+  sp.addEventListener("pointerup", end); sp.addEventListener("pointercancel", end);
+  sp.addEventListener("dblclick", () => setSetting(k, DEF[k], true));
+  sp.addEventListener("keydown", e => {
+    const d = vertical ? (e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0) : (e.key === "ArrowDown" ? 1 : e.key === "ArrowUp" ? -1 : 0);
+    if (d) { e.preventDefault(); setSetting(k, setting(k) + sign * d * 16, true); }
+  });
+});
+
+$("btnSettings").onclick = () => openDlg(d => {
+  const row = h("div", null, "setrow");
+  const lab = h("label", "文字顯示大小"); lab.htmlFor = "setFont";
+  const rng = document.createElement("input"); rng.type = "range"; rng.id = "setFont"; rng.min = LIM.fontScale[0]; rng.max = LIM.fontScale[1]; rng.step = 5; rng.value = setting("fontScale");
+  const out = document.createElement("output"); out.textContent = setting("fontScale") + "%";
+  const upd = (v, persist) => { setSetting("fontScale", v, persist); rng.value = setting("fontScale"); out.textContent = setting("fontScale") + "%"; };
+  rng.oninput = () => upd(+rng.value, false);
+  rng.onchange = () => upd(+rng.value, true);
+  row.append(lab, dBtn("A−", "", () => upd(setting("fontScale") - 10, true)), rng, dBtn("A＋", "", () => upd(setting("fontScale") + 10, true)), out);
+  const btns = h("div", null, "row");
+  btns.append(dBtn("恢復預設文字大小", "", () => upd(DEF.fontScale, true)),
+    dBtn("恢復預設區塊大小", "", () => { Object.keys(CSSVAR).forEach(k => { data.settings[k] = DEF[k]; }); applySettings(); save(); toast("區塊大小已恢復預設"); }),
+    dBtn("關閉", "primary", closeDlg));
+  d.append(h("h3", "設定"), row, h("div", "預覽：您好，已為您查詢退件進度，謝謝您的耐心等候。", "sample"),
+    h("p", "區塊大小：用滑鼠拖曳各區塊之間的分隔條即可調整，雙擊分隔條恢復該區塊的預設大小。"), btns);
+});
+
+/* ===== 只複製滑鼠選取的文字 ===== */
+const selBtn = $("selBtn");
+function selText(){
+  const sel = window.getSelection();
+  if (!sel || sel.isCollapsed || !sel.rangeCount) return null;
+  const node = sel.anchorNode && (sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement);
+  if (!node || !node.closest(".bubble .txt, .note .txt")) return null;
+  const t = sel.toString(); return t.trim() ? { t, rect: sel.getRangeAt(0).getBoundingClientRect() } : null;
+}
+function placeSelBtn(){
+  const s = selText();
+  if (!s) { selBtn.classList.remove("on"); return; }
+  selBtn.classList.add("on");
+  const w = selBtn.offsetWidth, hgt = selBtn.offsetHeight;
+  let top = s.rect.top - hgt - 8; if (top < 4) top = s.rect.bottom + 8;
+  selBtn.style.top = Math.min(window.innerHeight - hgt - 4, top) + "px";
+  selBtn.style.left = Math.max(4, Math.min(window.innerWidth - w - 4, s.rect.left + s.rect.width / 2 - w / 2)) + "px";
+}
+document.addEventListener("mouseup", () => setTimeout(placeSelBtn, 0));
+document.addEventListener("keyup", e => { if (e.shiftKey || e.key === "Shift") placeSelBtn(); });
+document.addEventListener("selectionchange", () => { if (!selText()) selBtn.classList.remove("on"); });
+document.addEventListener("scroll", () => selBtn.classList.remove("on"), true);
+selBtn.addEventListener("mousedown", e => e.preventDefault());   // 不要讓點按鈕清掉選取
+selBtn.onclick = () => { const s = selText(); if (s) copyText(s.t, "已複製選取的文字"); selBtn.classList.remove("on"); };
+
+applySettings();
+$("ver").textContent = "v" + APP_VERSION + (DESKTOP ? " 桌面版" : " 網頁預覽");
+render();
+if (loadFailed) toast("資料檔讀取失敗，目前顯示的是預設內容。請用「匯入 .txt」還原備份。");
+</script>
+</body>
+</html>
